@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Page Builder Studio | Editor Visual</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Konva for canvas manipulation (extra) -->
+    <script src="https://cdn.jsdelivr.net/npm/konva@9.2.0/konva.min.js"></script>
+    <!-- jQuery & UI -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1e1f2c;
+            height: 100vh;
+            overflow: hidden;
+            color: #eef;
+        }
+
+        /* MAIN LAYOUT */
+        .app {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* SIDEBAR - TOOLBOX */
+        .toolbox {
+            width: 280px;
+            background: #0f0f17;
+            border-right: 1px solid #2a2a3a;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+            z-index: 20;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+        }
+
+        .logo-area {
+            padding: 20px 20px 12px;
+            border-bottom: 1px solid #2a2a3a;
+            margin-bottom: 20px;
+        }
+        .logo-area h2 {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #ff8c00, #ff2d75);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .logo-area p {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+
+        .tool-category {
+            padding: 0 16px;
+            margin-bottom: 24px;
+        }
+        .tool-category h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+        .elements-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .tool-item {
+            background: #1e1f2c;
+            border-radius: 14px;
+            padding: 12px 6px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s ease;
+            border: 1px solid #2d2e42;
+            backdrop-filter: blur(2px);
+        }
+        .tool-item:active {
+            cursor: grabbing;
+        }
+        .tool-item:hover {
+            background: #2c2d44;
+            transform: scale(0.97);
+            border-color: #ff5e7c;
+        }
+        .tool-item i {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            display: block;
+            color: #ffb347;
+        }
+        .tool-item span {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* CANVAS AREA */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #12121a;
+            overflow: hidden;
+            position: relative;
+        }
+        .top-bar {
+            background: #0a0a10;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a3a;
+        }
+        .page-name {
+            background: #1e1f2c;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .actions {
+            display: flex;
+            gap: 14px;
+        }
+        .btn {
+            background: #2c2d44;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #ff4d6d;
+            box-shadow: 0 2px 8px rgba(255,77,109,0.3);
+        }
+        .btn-primary:hover {
+            background: #e63e5e;
+            transform: scale(1.02);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #4a4b6e;
+        }
+        .btn-outline:hover {
+            background: #2a2b40;
+        }
+
+        /* Scrollable page editor */
+        .editor-stage {
+            flex: 1;
+            overflow: auto;
+            padding: 30px 40px;
+            background: #191a24;
+            position: relative;
+        }
+        .page-canvas {
+            background: #fef7e8;
+            background-image: radial-gradient(circle at 10px 10px, #e2dcd0 0.8px, transparent 0.8px);
+            background-size: 20px 20px;
+            width: 700px;
+            min-height: 900px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.4);
+            border-radius: 28px;
+            transition: all 0.1s;
+            overflow: hidden;
+        }
+        .page-canvas {
+            background-color: #fffbf0;
+        }
+
+        /* Elementos dentro del canvas */
+        .editor-element {
+            position: absolute;
+            cursor: pointer;
+            border: 2px dashed transparent;
+            transition: border 0.1s;
+            user-select: none;
+            box-sizing: border-box;
+            background-clip: padding-box;
+        }
+        .editor-element.selected {
+            border: 2px solid #ff4d6d;
+            background-color: rgba(255,77,109,0.05);
+            z-index: 999;
+            box-shadow: 0 0 0 2px rgba(255,77,109,0.3);
+            cursor: move;
+        }
+        .element-resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 14px;
+            height: 14px;
+            background: #ff4d6d;
+            border-radius: 2px;
+            cursor: nw-resize;
+            z-index: 20;
+        }
+        .element-delete {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            background: #ff3b5c;
+            color: white;
+            border-radius: 30px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: 0.1s;
+            z-index: 25;
+            box-shadow: 0 2px 6px black;
+        }
+        .editor-element.selected .element-delete {
+            opacity: 1;
+        }
+
+        /* Estilos internos de elementos (vista previa) */
+        .elm-text {
+            font-family: 'Inter', sans-serif;
+            padding: 8px 12px;
+            background: rgba(255,255,220,0.9);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            word-break: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .elm-image {
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            background-position: center;
+            border-radius: 12px;
+        }
+        .elm-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .elm-button {
+            background: #ff4d6d;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 60px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .elm-shape {
+            background: #7c4dff;
+            border-radius: 16px;
+            opacity: 0.8;
+        }
+        .elm-spotify {
+            background: #191414;
+            border-radius: 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        .elm-spotify i {
+            font-size: 20px;
+            color: #1db954;
+        }
+
+        /* modal export */
+        .modal-export {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-export.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-card {
+            background: #1a1b26;
+            width: 600px;
+            max-width: 85vw;
+            border-radius: 32px;
+            padding: 24px;
+            border: 1px solid #4c4e73;
+            box-shadow: 0 30px 40px black;
+        }
+        .modal-card h3 {
+            margin-bottom: 12px;
+        }
+        .code-area {
+            background: #0c0c12;
+            border-radius: 20px;
+            padding: 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            height: 320px;
+            overflow: auto;
+            white-space: pre-wrap;
+            color: #cfcfcf;
+            border: 1px solid #333;
+        }
+        .copy-btn {
+            margin-top: 16px;
+            width: 100%;
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .inspector-panel {
+            background: #0f0f17;
+            border-left: 1px solid #2a2a3a;
+            width: 260px;
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .inspector-panel h4 {
+            font-size: 0.8rem;
+            color: #ffb347;
+        }
+        .inspector-panel input, .inspector-panel select {
+            background: #1e1f2c;
+            border: 1px solid #3a3b55;
+            color: white;
+            padding: 8px;
+            border-radius: 12px;
+            width: 100%;
+        }
+        hr {
+            border-color: #2a2a3a;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Barra lateral herramientas -->
+    <div class="toolbox">
+        <div class="logo-area">
+            <h2><i class="fas fa-puzzle-piece"></i> PageForge</h2>
+            <p>editor visual · estilo Mario Maker</p>
+        </div>
+        <div class="tool-category">
+            <h3><i class="fas fa-cube"></i> Bloques</h3>
+            <div class="elements-grid">
+                <div class="tool-item" data-type="text" data-icon="fa-font">
+                    <i class="fas fa-font"></i>
+                    <span>Texto</span>
+                </div>
+                <div class="tool-item" data-type="image" data-icon="fa-image">
+                    <i class="fas fa-image"></i>
+                    <span>Imagen</span>
+                </div>
+                <div class="tool-item" data-type="button" data-icon="fa-hand-pointer">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>Botón</span>
+                </div>
+                <div class="tool-item" data-type="shape" data-icon="fa-shapes">
+                    <i class="fas fa-shapes"></i>
+                    <span>Forma</span>
+                </div>
+                <div class="tool-item" data-type="spotify" data-icon="fa-spotify">
+                    <i class="fab fa-spotify"></i>
+                    <span>Spotify card</span>
+                </div>
+            </div>
+        </div>
+        <div class="tool-category">
+            <h3><i class="fas fa-magic"></i> Decoración</h3>
+            <div class="elements-grid">
+                <div class="tool-item" data-type="gimmick" data-icon="fa-paintbrush">
+                    <i class="fas fa-paintbrush"></i>
+                    <span>Gimmick</span>
+                </div>
+            </div>
+        </div>
+        <div class="tool-category" style="margin-top: auto; padding-bottom: 20px;">
+            <div class="tool-item" style="background:#ff4d6d20; cursor:pointer;" id="clearCanvasBtn">
+                <i class="fas fa-trash-alt"></i>
+                <span>Liminar todo</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de edición principal -->
+    <div class="canvas-area">
+        <div class="top-bar">
+            <div class="page-name"><i class="fas fa-drafting-compass"></i> Mi página · editor en vivo</div>
+            <div class="actions">
+                <button class="btn" id="exportCodeBtn"><i class="fas fa-code"></i> Exportar HTML</button>
+                <button class="btn btn-primary" id="previewBtn"><i class="fas fa-eye"></i> Vista previa (copia)</button>
+            </div>
+        </div>
+        <div class="editor-stage">
+            <div class="page-canvas" id="pageCanvas" style="position: relative; width: 700px; min-height: 900px;">
+                <!-- Aquí se generan los elementos dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspector simple -->
+    <div class="inspector-panel" id="inspectorPanel">
+        <h4><i class="fas fa-sliders-h"></i> Propiedades</h4>
+        <div id="inspectorContent">
+            <p style="font-size:12px; opacity:0.6">Selecciona un elemento</p>
+        </div>
+        <hr>
+        <button id="deleteSelectedBtn" class="btn" style="background:#aa2e4e;"><i class="fas fa-trash"></i> Eliminar</button>
+    </div>
+</div>
+
+<!-- Modal Exportación -->
+<div id="exportModal" class="modal-export">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between;"><h3><i class="fas fa-download"></i> Código HTML generado</h3><i class="fas fa-times close-modal" id="closeModalBtn" style="cursor:pointer"></i></div>
+        <div class="code-area" id="exportCodeArea"></div>
+        <button id="copyCodeBtn" class="btn btn-primary copy-btn"><i class="fas fa-copy"></i> Copiar código</button>
+    </div>
+</div>
+
+<script>
+    // ---------- ESTADO ----------
+    let elements = [];      // cada elemento: { id, type, x, y, w, h, content, extra }
+    let selectedId = null;
+    let nextId = 100;
+    let isDragging = false;
+    let dragOffsetX = 0, dragOffsetY = 0;
+    let resizeTarget = null;
+    let startResize = { w:0, h:0, x:0, y:0, mouseX:0, mouseY:0 };
+
+    const canvasContainer = document.getElementById('pageCanvas');
+    
+    // helper: render all elements
+    function renderCanvas() {
+        canvasContainer.innerHTML = '';
+        elements.forEach(el => {
+            const div = document.createElement('div');
+            div.className = 'editor-element';
+            if (selectedId === el.id) div.classList.add('selected');
+            div.style.position = 'absolute';
+            div.style.left = `${el.x}px`;
+            div.style.top = `${el.y}px`;
+            div.style.width = `${el.w}px`;
+            div.style.height = `${el.h}px`;
+            div.setAttribute('data-id', el.id);
+            div.setAttribute('data-type', el.type);
+            
+            // contenido interno según tipo
+            let innerHtml = '';
+            if (el.type === 'text') {
+                innerHtml = `<div class="elm-text" style="width:100%; height:100%; overflow:auto;">${el.content || 'Texto editable'}</div>`;
+            } else if (el.type === 'image') {
+                let imgSrc = el.content || 'https://picsum.photos/200/150?random='+el.id;
+                innerHtml = `<div class="elm-image" style="width:100%; height:100%;"><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;"></div>`;
+            } else if (el.type === 'button') {
+                innerHtml = `<div class="elm-button" style="width:100%; height:100%; justify-content:center;"><i class="fas fa-link"></i> ${el.content || 'Botón'}</div>`;
+            } else if (el.type === 'shape') {
+                let bgc = el.extra?.color || '#ff8c69';
+                innerHtml = `<div class="elm-shape" style="width:100%; height:100%; background:${bgc}; border-radius:18px;"></div>`;
+            } else if (el.type === 'spotify') {
+                innerHtml = `<div class="elm-spotify" style="width:100%; height:100%;"><i class="fab fa-spotify"></i> <span>${el.content || 'Canción ejemplo'}</span></div>`;
+            } else if (el.type === 'gimmick') {
+                innerHtml = `<div class="elm-shape" style="width:100%; height:100%; background:radial-gradient(circle at 30% 20%, #f0f, #a0f); display:flex; align-items:center; justify-content:center;"><i class="fas fa-gamepad"></i> gimmick</div>`;
+            }
+            
+            div.innerHTML = innerHtml + `<div class="element-delete"><i class="fas fa-times"></i></div>`;
+            if(el.type !== 'shape' && el.type !== 'gimmick') {
+                // agregar manija de resize
+                const handle = document.createElement('div');
+                handle.className = 'element-resize-handle';
+                div.appendChild(handle);
+            }
+            canvasContainer.appendChild(div);
+        });
+        attachEvents();
+    }
+    
+    function attachEvents() {
+        // eventos para cada elemento: seleccion, mover, resize, borrar
+        document.querySelectorAll('.editor-element').forEach(elDiv => {
+            const id = parseInt(elDiv.dataset.id);
+            elDiv.addEventListener('mousedown', (e) => {
+                if(e.target.classList.contains('element-delete')) {
+                    e.stopPropagation();
+                    deleteElementById(id);
+                    return;
+                }
+                if(e.target.classList.contains('element-resize-handle')) {
+                    e.stopPropagation();
+                    startResizeElement(e, id);
+                    return;
+                }
+                selectElement(id);
+                e.stopPropagation();
+                // iniciar arrastre
+                isDragging = true;
+                const rect = elDiv.getBoundingClientRect();
+                const containerRect = canvasContainer.getBoundingClientRect();
+                dragOffsetX = e.clientX - rect.left;
+                dragOffsetY = e.clientY - rect.top;
+                document.body.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && selectedId !== null) {
+                const el = elements.find(elm => elm.id === selectedId);
+                if(!el) return;
+                const containerRect = canvasContainer.getBoundingClientRect();
+                let newX = e.clientX - containerRect.left - dragOffsetX;
+                let newY = e.clientY - containerRect.top - dragOffsetY;
+                newX = Math.min(Math.max(0, newX), containerRect.width - el.w);
+                newY = Math.min(Math.max(0, newY), containerRect.height - el.h);
+                el.x = newX;
+                el.y = newY;
+                renderCanvas();
+            } else if (resizeTarget) {
+                const el = elements.find(elm => elm.id === resizeTarget);
+                if(el) {
+                    const dx = e.clientX - startResize.mouseX;
+                    const dy = e.clientY - startResize.mouseY;
+                    let newW = Math.max(40, startResize.w + dx);
+                    let newH = Math.max(40, startResize.h + dy);
+                    el.w = newW;
+                    el.h = newH;
+                    renderCanvas();
+                }
+            }
+        });
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            resizeTarget = null;
+            document.body.style.cursor = '';
+        });
+        canvasContainer.addEventListener('mousedown', (e) => {
+            if(e.target === canvasContainer) selectElement(null);
+        });
+    }
+    
+    function startResizeElement(e, id) {
+        const el = elements.find(el => el.id === id);
+        if(!el) return;
+        resizeTarget = id;
+        startResize = {
+            w: el.w, h: el.h, x: el.x, y: el.y,
+            mouseX: e.clientX, mouseY: e.clientY
+        };
+        e.stopPropagation();
+    }
+    
+    function selectElement(id) {
+        selectedId = id;
+        renderCanvas();
+        updateInspector();
+    }
+    
+    function deleteElementById(id) {
+        elements = elements.filter(el => el.id !== id);
+        if(selectedId === id) selectedId = null;
+        renderCanvas();
+        updateInspector();
+    }
+    
+    function addElement(type, x, y) {
+        let defaultW = 140, defaultH = 100;
+        let content = '';
+        let extra = null;
+        if(type === 'text') { defaultW = 180; defaultH = 80; content = 'Edita este texto ✨'; }
+        if(type === 'image') { defaultW = 160; defaultH = 120; content = 'https://picsum.photos/200/150'; }
+        if(type === 'button') { defaultW = 150; defaultH = 48; content = 'Haz clic'; }
+        if(type === 'shape') { defaultW = 140; defaultH = 140; extra = { color: '#b35eff' }; content = ''; }
+        if(type === 'spotify') { defaultW = 200; defaultH = 70; content = 'Song preview'; }
+        if(type === 'gimmick') { defaultW = 150; defaultH = 150; content = 'Gimmick Zone'; }
+        
+        const newId = nextId++;
+        elements.push({
+            id: newId,
+            type: type,
+            x: x,
+            y: y,
+            w: defaultW,
+            h: defaultH,
+            content: content,
+            extra: extra,
+            link: ''
+        });
+        selectElement(newId);
+        renderCanvas();
+    }
+    
+    // drop desde toolbox
+    document.querySelectorAll('.tool-item[data-type]').forEach(tool => {
+        tool.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', tool.dataset.type);
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+        tool.setAttribute('draggable', 'true');
+    });
+    canvasContainer.addEventListener('dragover', (e) => e.preventDefault());
+    canvasContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData('text/plain');
+        if(!type) return;
+        const rect = canvasContainer.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        x = Math.min(Math.max(10, x), rect.width - 100);
+        y = Math.min(Math.max(10, y), rect.height - 80);
+        addElement(type, x, y);
+    });
+    
+    // inspector dinámico
+    function updateInspector() {
+        const inspectorDiv = document.getElementById('inspectorContent');
+        if(!selectedId) {
+            inspectorDiv.innerHTML = '<p style="font-size:12px; opacity:0.6">✨ Selecciona un elemento para editarlo</p>';
+            return;
+        }
+        const el = elements.find(e => e.id === selectedId);
+        if(!el) return;
+        let html = `<label>Contenido / Texto</label><input type="text" id="inspContent" value="${escapeHtml(el.content || '')}">`;
+        if(el.type === 'image') {
+            html += `<label style="margin-top:8px">URL imagen</label><input type="text" id="inspImgUrl" value="${escapeHtml(el.content)}">`;
+        }
+        if(el.type === 'shape') {
+            html += `<label>Color</label><input type="color" id="shapeColor" value="${el.extra?.color || '#b35eff'}">`;
+        }
+        html += `<label style="margin-top:8px">Ancho (px)</label><input type="number" id="inspW" value="${el.w}" step="5">`;
+        html += `<label>Alto (px)</label><input type="number" id="inspH" value="${el.h}" step="5">`;
+        html += `<label>Pos X</label><input type="number" id="inspX" value="${el.x}"><label>Pos Y</label><input type="number" id="inspY" value="${el.y}">`;
+        inspectorDiv.innerHTML = html;
+        // eventos input
+        document.getElementById('inspContent')?.addEventListener('change', (e) => { el.content = e.target.value; renderCanvas(); });
+        document.getElementById('inspImgUrl')?.addEventListener('change', (e) => { el.content = e.target.value; renderCanvas(); });
+        document.getElementById('shapeColor')?.addEventListener('change', (e) => { if(el.extra) el.extra.color = e.target.value; else el.extra = {color: e.target.value}; renderCanvas(); });
+        document.getElementById('inspW')?.addEventListener('change', (e) => { el.w = parseInt(e.target.value) || 40; renderCanvas(); });
+        document.getElementById('inspH')?.addEventListener('change', (e) => { el.h = parseInt(e.target.value) || 40; renderCanvas(); });
+        document.getElementById('inspX')?.addEventListener('change', (e) => { el.x = parseInt(e.target.value) || 0; renderCanvas(); });
+        document.getElementById('inspY')?.addEventListener('change', (e) => { el.y = parseInt(e.target.value) || 0; renderCanvas(); });
+    }
+    
+    document.getElementById('deleteSelectedBtn').addEventListener('click', () => {
+        if(selectedId) deleteElementById(selectedId);
+    });
+    document.getElementById('clearCanvasBtn').addEventListener('click', () => {
+        if(confirm('¿Eliminar todos los elementos?')) { elements = []; selectedId = null; renderCanvas(); updateInspector(); }
+    });
+    
+    // Generar código HTML completo estilo strawpage
+    function generateFullHTML() {
+        let elementsHtml = '';
+        elements.forEach(el => {
+            let style = `position:absolute; left:${el.x}px; top:${el.y}px; width:${el.w}px; height:${el.h}px;`;
+            let inner = '';
+            if(el.type === 'text') inner = `<div style="font-family:Inter; background:white; padding:8px; border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">${el.content}</div>`;
+            else if(el.type === 'image') inner = `<img src="${el.content}" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
+            else if(el.type === 'button') inner = `<a href="#" style="display:flex; align-items:center; justify-content:center; background:#ff4d6d; color:white; border-radius:60px; width:100%; height:100%; font-weight:bold;">${el.content}</a>`;
+            else if(el.type === 'shape') inner = `<div style="background:${el.extra?.color || '#8a6eff'}; width:100%; height:100%; border-radius:24px;"></div>`;
+            else if(el.type === 'spotify') inner = `<div style="background:#191414; border-radius:20px; padding:6px; display:flex; gap:8px; align-items:center;"><i class="fab fa-spotify" style="color:#1DB954;"></i><span style="color:white;">${el.content}</span></div>`;
+            else if(el.type === 'gimmick') inner = `<div style="background:linear-gradient(145deg, #f0a, #c0f); border-radius:30px; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:white;"><i class="fas fa-star"></i> gimmick!</div>`;
+            elementsHtml += `<div class="page-element" style="${style}">${inner}</div>\n`;
+        });
+        return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"><style>
+    body { margin:0; background:#1e1f2c; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:'Inter',sans-serif; }
+    .page { position:relative; width:700px; min-height:900px; background:#fffbf0; margin:40px auto; border-radius:36px; box-shadow:0 20px 35px rgba(0,0,0,0.3); overflow:hidden; }
+    .page-element { position:absolute; }
+    * { box-sizing:border-box; }
+    img { max-width:100%; }
+</style></head>
+<body><div class="page">${elementsHtml}</div></body>
+</html>`;
+    }
+    
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;});}
+    
+    // exportar modal
+    const modal = document.getElementById('exportModal');
+    document.getElementById('exportCodeBtn').addEventListener('click', () => {
+        const code = generateFullHTML();
+        document.getElementById('exportCodeArea').innerText = code;
+        modal.classList.add('active');
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.remove('active'));
+    document.getElementById('copyCodeBtn').addEventListener('click', () => {
+        const code = document.getElementById('exportCodeArea').innerText;
+        navigator.clipboard.writeText(code).then(() => alert('Código copiado al portapapeles'));
+    });
+    document.getElementById('previewBtn').addEventListener('click', () => {
+        const newWin = window.open();
+        newWin.document.write(generateFullHTML());
+        newWin.document.close();
+    });
+    // inicializar con unos pocos elementos demo estilo mario maker
+    function initDemo() {
+        addElement('text', 40, 40); // se agrega con coordenadas pero se ajustará
+        const elText = elements.find(e => e.type === 'text');
+        if(elText) { elText.content = "🎮 ¡Bienvenido al editor estilo Mario Maker! 🧩"; elText.w=280; elText.x=30; elText.y=25; }
+        addElement('shape', 500, 150);
+        addElement('button', 80, 220);
+        const btn = elements.find(e=>e.type==='button');
+        if(btn) { btn.content = "✨ Botón mágico ✨"; btn.w=160; }
+        addElement('spotify', 400, 320);
+        renderCanvas();
+    }
+    setTimeout(initDemo, 100);
+</script>
+</body>
+</html>
